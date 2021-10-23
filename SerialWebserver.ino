@@ -3,6 +3,7 @@
 #define HTTP_MAX_HEADERS 6
 #define BAUD 115200
 
+// Reads a line from the serial port
 String readString(bool skipReturn, bool doTrim) {
   String buf = "";
   auto done = false;
@@ -28,11 +29,8 @@ String readString(bool skipReturn, bool doTrim) {
 String readString() {
   return readString(true, true);
 }
-int readInt() {
-  while(Serial.available() < 1) {}
-  return Serial.parseInt();
-}
 
+// Sends an HTTP response with the provided status, content type, and content
 void sendHttpResponse(int status, String statusMsg, String contentType, String content) {
   String statusStr = F("HTTP/1.1 ");
   statusStr+=String(status);
@@ -46,8 +44,20 @@ void sendHttpResponse(int status, String statusMsg, String contentType, String c
   String lenStr = F("Content-Length: ");
   lenStr+=String(content.length());
   Serial.println(lenStr);
-  Serial.println(F(""));
+  Serial.println("");
   Serial.print(content);
+}
+
+// Sends an HTTP redirect to the provided URL
+void sendHttpRedirect(String url) {
+  Serial.println(F("HTTP/1.1 302 Found"));
+  Serial.println(F("Connection: close"));
+  Serial.println(F("Content-Type: text/plain"));
+  String locStr = F("Location: ");
+  locStr+=url;
+  Serial.println(locStr);
+  Serial.println(F("Content-Length: 0"));
+  Serial.println("");
 }
 
 struct HttpHeader {
@@ -59,7 +69,6 @@ struct HttpRequest {
   String path;
   unsigned char headersCount;
   struct HttpHeader headers[HTTP_MAX_HEADERS];
-  String body;
 };
 
 // Returns the value of the header with the provided name, or an empty String if it cannot be found
@@ -77,6 +86,7 @@ String getHeader(struct HttpRequest *req, String name) {
   return "";
 }
 
+// Waits for an parses an HTTP request into an HttpRequest struct
 struct HttpRequest parseHttpRequest() {
   // Read and parse first line
   auto ln = readString();
@@ -117,6 +127,7 @@ struct HttpRequest parseHttpRequest() {
 }
 
 void setup() {
+  // Setup serial communication
   Serial.begin(BAUD);
 }
 
@@ -128,7 +139,7 @@ void loop() {
   struct HttpRequest req = parseHttpRequest();
 
   // Pages
-  if(req.path == "/") {
+  if(req.path == "/") { // Homepage
     String res = F("<title>SerialWebserver Home</title><h1>Welcome</h1><p>You've found yourself at the SerialWebserver homepage.</p><p>This website is hosted on an <a href=\"https://www.arduino.cc/en/Main/arduinoBoardUno&amp;gt;\">Arduino Uno</a> microcontroller.</p><p><a href=\"/memory\">Memory info</a> - <a href=\"/headers\">HTTP headers</a></p><p>Page hits: ");
     res+=String(pageHits);
     res+=F("</p>");
@@ -137,7 +148,9 @@ void loop() {
       F("text/html"),
       res
     );
-  } else if(req.path == "/memory") {
+  } else if(req.path == "/index.html") { // Redirect index.html to homepage
+    sendHttpRedirect(F("/"));
+  } else if(req.path == "/memory") { // Memory information
     String res = F("<title>Memory Info</title><h1>Memory Info</h1><p>The server currently has ");
     res+=String(freeMemory());
     res+=F(" bytes of memory free. There may be more used on more content-heavy pages.</p><p><a href=\"/\">Back</a></p>");
@@ -146,7 +159,7 @@ void loop() {
       F("text/html"),
       res
     );
-  } else if(req.path == "/headers") {
+  } else if(req.path == "/headers") { // HTTP headers information
     String res = F("<title>HTTP headers</title><h1>HTTP headers</h1><p>Received the following headers (capped at ");
     res+=String(HTTP_MAX_HEADERS);
     res+=F(" headers):</p><pre>");
@@ -164,7 +177,7 @@ void loop() {
       F("text/html"),
       res
     );
-  } else {
+  } else { // 404 not found page
     String res = F("<title>Not Found</title><h1>Not Found</h1><p>The page \"");
     res+=req.path;
     res+=F("\" does not exist.</p>");
@@ -175,5 +188,6 @@ void loop() {
     );
   }
 
+  // Increment page hits for each request, even if it doesn't match a route
   pageHits++;
 }

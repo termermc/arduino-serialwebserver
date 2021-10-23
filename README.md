@@ -1,8 +1,12 @@
 # arduino-serialwebserver
-A webserver that runs on an Arduino microcontroller (tested on Arduino Uno)
+A webserver that runs on an Arduino microcontroller via serial port (tested on Arduino Uno)
 
 # Purpose
-Experimentation, of course! This also has potential to be useful for IoT applications and remote configuration, however.
+Experimentation, of course!
+
+This allows you to create a webserver with only a standard Arduino, a USB cable, and a computer -- no Ethernet or WiFi module required!
+
+This also has potential to be useful for IoT applications and remote configuration.
 If you want to use practical use out of this, it would be best to run it on a device with more than 2k RAM.
 
 # Dependencies
